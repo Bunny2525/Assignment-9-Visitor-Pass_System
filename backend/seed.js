@@ -1,64 +1,50 @@
 const mongoose = require('mongoose');
-const dotenv = require('dotenv');
-const Visitor = require('./models/Visitor');
-const User = require('./models/User');
-
-dotenv.config();
+const bcrypt = require('bcryptjs');
+const User = require('./models/User'); // Adjust path if needed
+require('dotenv').config();
 
 const seedDatabase = async () => {
   try {
-    console.log('Connecting to database...');
     await mongoose.connect(process.env.MONGO_URI);
-    console.log('Connected!');
+    console.log("Connected to DB. Wiping old data...");
+    
+    await User.deleteMany(); // Clear out the old mess
 
-    const adminUser = await User.findOne();
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash('password123', salt);
 
-    if (!adminUser) {
-      console.error('No users found. Please register at least one user before seeding.');
-      process.exit(1);
-    }
-
-    console.log('Clearing old visitors...');
-    await Visitor.deleteMany();
-
-    const dummyVisitors = [
+    const users = [
+      {
+        name: 'System Admin',
+        email: 'admin@visitorpass.com',
+        password: hashedPassword,
+        role: 'Admin'
+      },
+      {
+        name: 'Front Desk Security',
+        email: 'security@visitorpass.com',
+        password: hashedPassword,
+        role: 'Security'
+      },
+      {
+        name: 'Bruce Wayne',
+        email: 'bruce@wayneenterprises.com',
+        password: hashedPassword,
+        role: 'Employee'
+      },
       {
         name: 'Clark Kent',
         email: 'clark@dailyplanet.com',
-        phone: '555-0101',
-        hostName: 'Bruce Wayne',
-        purposeOfVisit: 'Interview',
-        status: 'Pending',
-        createdBy: adminUser._id
-      },
-      {
-        name: 'Lois Lane',
-        email: 'lois@dailyplanet.com',
-        phone: '555-0102',
-        hostName: 'Diana Prince',
-        purposeOfVisit: 'Press Conference',
-        status: 'Checked-In',
-        createdBy: adminUser._id
-      },
-      {
-        name: 'Barry Allen',
-        email: 'barry@starlabs.com',
-        phone: '555-0103',
-        hostName: 'Bruce Wayne',
-        purposeOfVisit: 'IT Support',
-        status: 'Checked-Out',
-        createdBy: adminUser._id
+        password: hashedPassword,
+        role: 'Visitor'
       }
     ];
 
-    console.log('Inserting dummy data...');
-    await Visitor.insertMany(dummyVisitors);
-    
-    console.log('Database successfully seeded!');
-    process.exit(0);
-
+    await User.insertMany(users);
+    console.log("Success! Admin, Security, Employee, and Visitor seeded.");
+    process.exit();
   } catch (error) {
-    console.error('Error seeding data:', error.message);
+    console.error("Seeding failed:", error);
     process.exit(1);
   }
 };

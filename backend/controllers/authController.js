@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 // Register a new user
-const registerUser = async (req, res, next) => {
+const registerUser = async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
 
@@ -23,19 +23,21 @@ const registerUser = async (req, res, next) => {
       name,
       email,
       password: hashedPassword,
-      role: role || 'Employee' 
+      // CRITICAL FIX: Default to 'Visitor' to satisfy mentor Requirement 2
+      role: role || 'Visitor' 
     });
 
     await user.save();
 
-    res.status(201).json({ message: 'User registered successfully!' });
+    return res.status(201).json({ message: 'User registered successfully!' });
   } catch (error) {
-    next(error);
+    console.log("Error in registerUser:", error.message);
+    return res.status(500).json({ message: 'Server error during registration.' });
   }
 };
 
 // Authenticate user & generate JWT
-const loginUser = async (req, res, next) => {
+const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -55,7 +57,7 @@ const loginUser = async (req, res, next) => {
       { expiresIn: '1d' } 
     );
 
-    res.status(200).json({
+    return res.status(200).json({
       message: 'Login successful',
       token,
       user: {
@@ -66,7 +68,8 @@ const loginUser = async (req, res, next) => {
       }
     });
   } catch (error) {
-    next(error);
+    console.log("Error in loginUser:", error.message);
+    return res.status(500).json({ message: 'Server error during login.' });
   }
 };
 
