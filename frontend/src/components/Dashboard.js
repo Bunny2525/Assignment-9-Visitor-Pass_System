@@ -11,7 +11,6 @@ function Dashboard() {
   const [userRole, setUserRole] = useState('');
   const [showScanner, setShowScanner] = useState(false);
   
-  // State for the 3 missing filters requested by the mentor
   const [statusFilter, setStatusFilter] = useState('All');
   const [dateFilter, setDateFilter] = useState('All');
   const [hostFilter, setHostFilter] = useState('All');
@@ -36,7 +35,6 @@ function Dashboard() {
     fetchVisitors();
   }, []);
 
-  // 🛠️ THE FIX: Point this directly to the secure Scan route so it creates Audit Logs!
   const handleUpdateStatus = async (id) => {
     try {
       const token = localStorage.getItem('token');
@@ -45,9 +43,7 @@ function Dashboard() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
-      // Update the UI instantly with the new status returned by the backend
       setVisitors(visitors.map(v => v._id === id ? { ...v, status: res.data.currentStatus } : v));
-      
     } catch (err) {
       console.error(err);
       alert('Error updating status. Check backend terminal for details.');
@@ -126,12 +122,11 @@ function Dashboard() {
         <QRScanner 
           onClose={() => setShowScanner(false)}
           onScan={(data) => {
-            try {
-              const parsed = JSON.parse(data);
-              handleUpdateStatus(parsed.visitorId); 
+            if (data) {
+              handleUpdateStatus(data); 
               setShowScanner(false);
-              alert(`Successfully scanned: ${parsed.name}`);
-            } catch (e) {
+              alert('QR Code Scanned Successfully');
+            } else {
               alert("Invalid QR Code!");
             }
           }}
@@ -179,7 +174,13 @@ function Dashboard() {
         {filteredVisitors.length === 0 ? <p>No visitors found matching those filters.</p> : (
           filteredVisitors.map((visitor) => (
             <div id={`badge-${visitor._id}`} key={visitor._id} style={{ border: '2px solid #333', padding: '15px', borderRadius: '8px', width: '250px', backgroundColor: 'white' }}>
-              {visitor.photo && <img src={visitor.photo} alt="Visitor Face" style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', marginBottom: '10px' }} />}
+              {visitor.photo && (
+                <img 
+                  src={visitor.photo.startsWith('http') ? visitor.photo : `http://localhost:5000/${visitor.photo.replace(/\\/g, '/')}`} 
+                  alt="Visitor Face" 
+                  style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', marginBottom: '10px' }} 
+                />
+              )}
               <h3 style={{ margin: '0 0 10px 0' }}>{visitor.name}</h3>
               <p><strong>Host:</strong> {visitor.hostName}</p>
               <p><strong>Status:</strong> <span style={{ fontWeight: 'bold', color: visitor.status === 'Checked-In' ? 'green' : 'black' }}>{visitor.status || 'Pending'}</span></p>

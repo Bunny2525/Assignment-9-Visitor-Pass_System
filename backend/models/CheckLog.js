@@ -1,15 +1,14 @@
 const mongoose = require('mongoose');
 
-// Schema to keep a secure audit trail of all front desk QR scans
 const checkLogSchema = new mongoose.Schema({
   appointmentId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Appointment', // which specific visit was scanned
+    ref: 'Appointment',
     required: true
   },
   scannedBySecurityId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User', // which security guard performed the scan
+    ref: 'User',
     required: true
   },
   actionType: {
@@ -19,7 +18,7 @@ const checkLogSchema = new mongoose.Schema({
   },
   timestamp: {
     type: Date,
-    default: Date.now // records the exact moment the QR code was scanned
+    default: Date.now
   }
 });
 

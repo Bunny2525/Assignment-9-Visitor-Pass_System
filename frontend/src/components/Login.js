@@ -14,7 +14,6 @@ function Login() {
 
       localStorage.setItem('token', res.data.token);
       
-      // CRITICAL FIX: Strictly use the backend role, default to lowest privilege if undefined
       const userRole = res.data.user?.role || 'Visitor';
       localStorage.setItem('role', userRole);
 

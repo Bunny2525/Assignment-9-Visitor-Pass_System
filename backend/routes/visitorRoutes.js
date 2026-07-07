@@ -1,4 +1,5 @@
 const express = require('express');
+const multer = require('multer');
 const { 
   getVisitors, 
   requestVisit, 
@@ -9,36 +10,21 @@ const { protect, authorizeRoles } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-// 1. Dashboard Data: Everyone logged in can see their relevant data
-router.get(
-  '/', 
-  protect, 
-  authorizeRoles('Admin', 'Security', 'Employee', 'Visitor'), 
-  getVisitors
-);
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/');
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + '-' + file.originalname);
+  }
+});
 
-// 2. Request an Appointment: Visitors (and Admins) can request visits
-router.post(
-  '/request', 
-  protect, 
-  authorizeRoles('Visitor', 'Admin', 'Employee'), 
-  requestVisit
-);
+const upload = multer({ storage });
 
-// 3. Approve/Reject Appointment: Only Employees and Admins can approve passes (Req 1)
-router.put(
-  '/:id/status', 
-  protect, 
-  authorizeRoles('Employee', 'Admin'), 
-  updateAppointmentStatus
-);
-
-// 4. Scan QR Code: ONLY Security guards and Admins can scan badges (Req 1 & 7)
-router.post(
-  '/scan', 
-  protect, 
-  authorizeRoles('Security', 'Admin'), 
-  handleQRScan
-);
+router.get('/', protect, authorizeRoles('Admin', 'Security', 'Employee', 'Visitor'), getVisitors);
+router.post('/request', protect, authorizeRoles('Visitor', 'Admin', 'Employee'), upload.single('photo'), requestVisit);
+router.put('/:id/status', protect, authorizeRoles('Employee', 'Admin'), updateAppointmentStatus);
+router.post('/scan', protect, authorizeRoles('Security', 'Admin'), handleQRScan);
 
 module.exports = router;

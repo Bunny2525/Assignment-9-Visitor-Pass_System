@@ -9,9 +9,10 @@ const sendSMS = async (phoneNumber, messageBody) => {
       from: process.env.TWILIO_PHONE_NUMBER,
       to: phoneNumber
     });
+    
     return true;
   } catch (error) {
-    console.error("SMS failed to send:", error);
+    console.error(error);
     return false;
   }
 };

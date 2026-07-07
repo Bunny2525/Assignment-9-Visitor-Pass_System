@@ -14,7 +14,6 @@ function QRScanner({ onScan, onClose }) {
       }
     });
 
-    // Cleanup on unmount to prevent memory leaks
     return () => codeReader.reset();
   }, [onScan]);
 
@@ -30,7 +29,7 @@ function QRScanner({ onScan, onClose }) {
       display: 'flex', 
       flexDirection: 'column', 
       alignItems: 'center', 
-      justifyContent: 'center' 
+      justify: 'center' 
     }}>
       <video ref={videoRef} style={{ width: '80%', maxWidth: '500px', borderRadius: '8px' }} />
       <button onClick={onClose} style={{ marginTop: '20px', padding: '10px 20px', cursor: 'pointer' }}>

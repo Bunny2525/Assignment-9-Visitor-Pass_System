@@ -4,10 +4,11 @@ import { useNavigate } from 'react-router-dom';
 
 function AddVisitor() {
   const [formData, setFormData] = useState({
-    hostId: '', // We now strictly use the MongoDB ObjectId for the relational database
+    hostId: '',
     dateOfVisit: '',
     purposeOfVisit: ''
   });
+  const [photo, setPhoto] = useState(null);
   
   const navigate = useNavigate();
 
@@ -15,19 +16,34 @@ function AddVisitor() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const handleFileChange = (e) => {
+    setPhoto(e.target.files[0]);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
       
-      // Notice we are hitting the CORRECT new endpoint: /request
-      await axios.post('http://localhost:5000/api/visitors/request', formData, {
-        headers: { Authorization: `Bearer ${token}` }
+      const submitData = new FormData();
+      submitData.append('hostId', formData.hostId);
+      submitData.append('dateOfVisit', formData.dateOfVisit);
+      submitData.append('purposeOfVisit', formData.purposeOfVisit);
+      if (photo) {
+        submitData.append('photo', photo);
+      }
+
+      await axios.post('http://localhost:5000/api/visitors/request', submitData, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
       });
       
-      alert('Visit Request Submitted Successfully! Waiting for Host Approval.');
+      alert('Visit request submitted successfully');
       navigate('/dashboard');
     } catch (err) {
+      console.error(err);
       alert('Error requesting visit: ' + (err.response?.data?.message || 'Server error'));
     }
   };
@@ -35,10 +51,6 @@ function AddVisitor() {
   return (
     <div style={{ maxWidth: '450px', margin: '40px auto', padding: '20px', border: '1px solid #ccc', borderRadius: '8px', backgroundColor: '#f9f9f9' }}>
       <h2 style={{ marginTop: 0 }}>Request a Visit Pass</h2>
-      
-      <p style={{ fontSize: '14px', color: '#555', marginBottom: '20px' }}>
-        <em>Note: Because you are securely logged in, the system already knows your identity. You only need to provide the visit details below.</em>
-      </p>
 
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
         
@@ -47,12 +59,11 @@ function AddVisitor() {
           <input 
             type="text" 
             name="hostId" 
-            placeholder="Paste the 24-character Host ID here" 
+            placeholder="Enter Host ID" 
             onChange={handleChange} 
             required 
             style={{ width: '100%', padding: '10px', marginTop: '5px', boxSizing: 'border-box' }}
           />
-          <small style={{ color: '#dc3545' }}>*For the demo, open MongoDB Compass and copy Bruce Wayne's ID.</small>
         </div>
 
         <div>
@@ -71,10 +82,22 @@ function AddVisitor() {
           <input 
             type="text" 
             name="purposeOfVisit" 
-            placeholder="e.g., Job Interview, Client Meeting" 
+            placeholder="e.g., Job Interview, Meeting" 
             onChange={handleChange} 
             required 
             style={{ width: '100%', padding: '10px', marginTop: '5px', boxSizing: 'border-box' }}
+          />
+        </div>
+
+        <div>
+          <label><strong>Visitor Photo:</strong></label><br />
+          <input 
+            type="file" 
+            accept="image/*" 
+            name="photo" 
+            onChange={handleFileChange} 
+            required 
+            style={{ width: '100%', padding: '10px', marginTop: '5px', boxSizing: 'border-box', backgroundColor: 'white' }}
           />
         </div>
         

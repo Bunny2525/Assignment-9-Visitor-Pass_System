@@ -13,7 +13,7 @@ A full-stack, production-ready Visitor Pass Management System built using the ME
 
 ## 💻 Tech Stack
 * **Frontend:** React 18, React Router v6, Axios, jsPDF, html2canvas, @zxing/library (QR Scanner)
-* **Backend:** Node.js, Express.js, Mongoose, qrcode, Nodemailer, Twilio
+* **Backend:** Node.js, Express.js, Mongoose, qrcode, Nodemailer, Twilio, Multer
 * **Database:** MongoDB Atlas
 * **Security:** bcryptjs, JSON Web Tokens (JWT), strict root `.gitignore` policies
 
@@ -36,12 +36,13 @@ To ensure a highly optimized and secure application, several architectural chall
    * **Solution:** Implemented a unified, root-level `.gitignore` configuration. Cleared the Git cache to untrack previously cached files, guaranteeing that production database URIs and Twilio secrets remain strictly local, while preserving a safe `.env.example` blueprint for deployment.
 
 4. **Hardware Cleanup & Payload Constraints:**
-   * **Challenge:** Base64 photo uploads exceeded default Express body limits, and the React webcam component caused memory leaks if not unmounted properly.
-   * **Solution:** Configured `express.json({ limit: '50mb' })` to safely parse image strings, and utilized React `useEffect` cleanup functions (`codeReader.reset()`) to sever hardware camera connections immediately upon component unmount.
+   * **Challenge:** Multer photo uploads and the React webcam component caused memory leaks if not unmounted properly.
+   * **Solution:** Configured Express to safely parse form-data and static uploads, and utilized React `useEffect` cleanup functions (`codeReader.reset()`) to sever hardware camera connections immediately upon component unmount.
 
 ---
 
 ## 📁 Project Structure
+
 
 VISITOR-PASS-SYSTEM/
 ├── backend/
@@ -62,8 +63,9 @@ VISITOR-PASS-SYSTEM/
 │   ├── utils/
 │   │   ├── sendEmail.js
 │   │   └── sendSMS.js
-│   ├── .env                 # Ignored by Git
-│   ├── .env.example         # Tracked template
+│   ├── uploads/               # Local storage for Multer images (Git Ignored)
+│   ├── .env                   # Ignored by Git
+│   ├── .env.example           # Tracked template
 │   ├── package.json
 │   ├── seed.js             
 │   └── server.js           
@@ -85,13 +87,15 @@ VISITOR-PASS-SYSTEM/
 ├── .gitignore               # Root-level unified gitignore
 └── README.md
 
+
 🛠️ Installation & Setup Guide
+
 1. Prerequisites
 Node.js installed on your machine.
 
 A MongoDB Atlas account and cluster URI.
 
-Optional: Twilio Account SID/Auth Token and a Gmail App Password for notifications.
+(Optional) Twilio Account SID/Auth Token and a Gmail App Password for live notifications.
 
 2. Backend Setup
 Open a terminal and navigate to the backend directory:
@@ -124,13 +128,11 @@ cd frontend
 npm install
 npm start
 🧪 Running the Demo (Seed Data)
-To make testing seamless for reviewers, this project includes a database seeding script that automatically generates test users for all four RBAC roles.
+To make testing seamless for reviewers, this project includes a database seeding script that automatically generates test users for all four RBAC roles, along with sample appointments and audit logs.
 
 Ensure your backend server is stopped temporarily. In the backend terminal, run:
 
 Bash
-npm run seed
-# or
 node seed.js
 Once you see the success message, restart your backend server (npm start). You can now log into the frontend using the generated credentials:
 
