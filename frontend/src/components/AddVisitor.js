@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import config from '../config';
 
 function AddVisitor() {
   const [formData, setFormData] = useState({
@@ -22,6 +23,25 @@ function AddVisitor() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // --- CUSTOM CLIENT-SIDE VALIDATION ---
+    // 1. Check if the date is in the past
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset time to midnight for accurate comparison
+    const selectedDate = new Date(formData.dateOfVisit);
+
+    if (selectedDate < today) {
+      alert("Error: You cannot schedule a visit for a past date.");
+      return; // Stops the form from submitting
+    }
+
+    // 2. Check if the purpose is too short
+    if (formData.purposeOfVisit.trim().length < 5) {
+      alert("Error: Please provide a more descriptive purpose of visit.");
+      return; // Stops the form from submitting
+    }
+    // ---------------------------------------
+
     try {
       const token = localStorage.getItem('token');
       
@@ -33,7 +53,7 @@ function AddVisitor() {
         submitData.append('photo', photo);
       }
 
-      await axios.post('http://localhost:5000/api/visitors/request', submitData, {
+      await axios.post(`${config.API_URL}/visitors/request`, submitData, {
         headers: { 
           Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'

@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
 import QRScanner from './QRScanner';
+import config from '../config';
 
 function Dashboard() {
   const [visitors, setVisitors] = useState([]);
@@ -24,7 +24,7 @@ function Dashboard() {
     const fetchVisitors = async () => {
       try {
         const token = localStorage.getItem('token');
-        const res = await axios.get('http://localhost:5000/api/visitors', {
+        const res = await axios.get(`${config.API_URL}/visitors`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setVisitors(Array.isArray(res.data) ? res.data : []);
@@ -38,7 +38,7 @@ function Dashboard() {
   const handleUpdateStatus = async (id) => {
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.post(`http://localhost:5000/api/visitors/scan`, 
+     const res = await axios.post(`${config.API_URL}/visitors/scan`,
         { appointmentId: id },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -66,16 +66,34 @@ function Dashboard() {
     document.body.removeChild(link);
   };
 
-  const downloadBadge = (visitorId, visitorName) => {
-    const badgeElement = document.getElementById(`badge-${visitorId}`);
-    html2canvas(badgeElement).then((canvas) => {
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: [canvas.width, canvas.height] });
-      
-      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
-      const safeName = visitorName ? visitorName.replace(' ', '_') : 'Visitor';
-      pdf.save(`${safeName}_Badge.pdf`);
+  const downloadBadge = (visitor) => {
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'pt',
+      format: [250, 400]
     });
+
+    doc.setLineWidth(2);
+    doc.rect(10, 10, 230, 380);
+
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text('VISITOR PASS', 125, 40, { align: 'center' });
+    
+    doc.setLineWidth(0.5);
+    doc.line(20, 50, 230, 50);
+
+    doc.setFontSize(14);
+    doc.text(visitor.name || 'Unknown', 125, 80, { align: 'center' });
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Host: ${visitor.hostName || 'N/A'}`, 125, 105, { align: 'center' });
+    doc.text(`Date: ${new Date(visitor.createdAt).toLocaleDateString()}`, 125, 125, { align: 'center' });
+    doc.text(`Purpose: ${visitor.purposeOfVisit || 'N/A'}`, 125, 145, { align: 'center' });
+
+    const safeName = visitor.name ? visitor.name.replace(' ', '_') : 'Visitor';
+    doc.save(`${safeName}_Official_Badge.pdf`);
   };
 
   const uniqueHosts = ['All', ...new Set(visitors.map(v => v.hostName).filter(Boolean))];
@@ -120,10 +138,19 @@ function Dashboard() {
 
       {showScanner && (
         <QRScanner 
-          onClose={() => setShowScanner(false)}
           onScan={(data) => {
             if (data) {
-              handleUpdateStatus(data); 
+              // TODO: Convert old raw-text QR codes to structured JSON format
+              try {
+                // Try to parse it as a professional structured ID
+                const parsedData = JSON.parse(data);
+                handleUpdateStatus(parsedData.appointmentId || parsedData.id);
+              } catch (e) {
+                // Fallback for older raw-text QR codes
+                console.warn("Legacy QR code detected (raw text).");
+                handleUpdateStatus(data);
+              }
+              
               setShowScanner(false);
               alert('QR Code Scanned Successfully');
             } else {
@@ -176,7 +203,7 @@ function Dashboard() {
             <div id={`badge-${visitor._id}`} key={visitor._id} style={{ border: '2px solid #333', padding: '15px', borderRadius: '8px', width: '250px', backgroundColor: 'white' }}>
               {visitor.photo && (
                 <img 
-                  src={visitor.photo.startsWith('http') ? visitor.photo : `http://localhost:5000/${visitor.photo.replace(/\\/g, '/')}`} 
+                  src={visitor.photo.startsWith('http') ? visitor.photo : `${config.API_URL.replace('/api', '')}/${visitor.photo.replace(/\\/g, '/')}`}
                   alt="Visitor Face" 
                   style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', marginBottom: '10px' }} 
                 />
@@ -186,7 +213,7 @@ function Dashboard() {
               <p><strong>Status:</strong> <span style={{ fontWeight: 'bold', color: visitor.status === 'Checked-In' ? 'green' : 'black' }}>{visitor.status || 'Pending'}</span></p>
               {visitor.qrCodeUrl && <img src={visitor.qrCodeUrl} alt="QR" style={{ width: '150px', marginTop: '10px' }} />}
               
-              <button onClick={() => downloadBadge(visitor._id, visitor.name)} style={{ marginTop: '15px', padding: '8px', backgroundColor: '#17a2b8', color: 'white', border: 'none', borderRadius: '4px', width: '100%', cursor: 'pointer' }}>Download PDF</button>
+              <button onClick={() => downloadBadge(visitor)} style={{ marginTop: '15px', padding: '8px', backgroundColor: '#17a2b8', color: 'white', border: 'none', borderRadius: '4px', width: '100%', cursor: 'pointer' }}>Download PDF</button>
               
               {visitor.status === 'Pending' && <button onClick={() => handleUpdateStatus(visitor._id)} style={{ marginTop: '10px', padding: '8px', backgroundColor: '#28a745', color: 'white', border: 'none', width: '100%', cursor: 'pointer' }}>Check In</button>}
             </div>

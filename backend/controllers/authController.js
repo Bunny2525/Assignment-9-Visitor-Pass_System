@@ -10,17 +10,17 @@ const registerUser = async (req, res) => {
       return res.status(400).json({ message: 'All fields are required' });
     }
 
-    // Check if user already exists
+    // check if the email is already taken in the db
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: 'Email already in use' });
     }
 
-    // Hash password
+    // hash the password before saving
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Create new user, default to Visitor role if none provided
+    // create user, default to Visitor if they didn't pass a role
     const user = new User({
       name,
       email,
@@ -32,7 +32,7 @@ const registerUser = async (req, res) => {
     res.status(201).json({ message: 'User registered successfully' });
 
   } catch (error) {
-    console.error(error);
+    console.error("Register error:", error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -40,20 +40,28 @@ const registerUser = async (req, res) => {
 const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
+    
+    // debugging log to see who is trying to log in
+    console.log(`Login attempt for: ${email}`);
 
-    // Find user by email
+    // find user
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    // Verify password matches
+    // compare typed password with the db password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    // Generate JWT token
+    if (!process.env.JWT_SECRET) {
+      console.error("CRITICAL: Missing JWT_SECRET in .env file");
+      return res.status(500).json({ message: 'Server configuration error' });
+    }
+
+    // generate the token for 1 day
     const token = jwt.sign(
       { userId: user._id, role: user.role }, 
       process.env.JWT_SECRET, 
@@ -71,7 +79,7 @@ const loginUser = async (req, res) => {
     });
 
   } catch (error) {
-    console.error(error);
+    console.error("Login error:", error);
     res.status(500).json({ message: 'Server error' });
   }
 };

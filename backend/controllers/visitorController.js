@@ -13,10 +13,12 @@ const getVisitors = async (req, res) => {
 
     const formattedData = await Promise.all(appointments.map(async (appt) => {
       let qr = appt.qrCodeUrl || (appt.visitorId ? appt.visitorId.qrCodeUrl : null);
-      
+
       if (!qr) {
-        qr = await QRCode.toDataURL(appt._id.toString());
+        // Updated self-healing loop to use the new JSON format
+        qr = await QRCode.toDataURL(JSON.stringify({ appointmentId: appt._id.toString() }));
       }
+
 
       return {
         _id: appt._id,
@@ -55,7 +57,9 @@ const requestVisit = async (req, res) => {
       status: 'Pending'
     });
 
-    const qrCodeData = await QRCode.toDataURL(newAppointment._id.toString());
+    // Creating a structured JSON object for the QR code instead of raw text
+    const qrPayload = JSON.stringify({ appointmentId: newAppointment._id.toString() });
+    const qrCodeData = await QRCode.toDataURL(qrPayload);
     newAppointment.qrCodeUrl = qrCodeData;
 
     await newAppointment.save();
@@ -91,28 +95,35 @@ const updateAppointmentStatus = async (req, res) => {
     appointment.status = newStatus;
     await appointment.save();
 
+    let notificationAlert = "No contact info found";
+
     const visitor = await User.findById(appointment.visitorId);
     if (visitor) {
       const subject = `Visitor Pass Status: ${newStatus}`;
       const message = `Hello ${visitor.name},\n\nYour visit on ${appointment.dateOfVisit} is now ${newStatus}.\n\nPurpose: ${appointment.purposeOfVisit}`;
-      
+
       try {
         await sendEmail(visitor.email, subject, message);
         if (visitor.phone) {
           await sendSMS(visitor.phone, `Visitor System: Your pass is ${newStatus}.`);
         }
+        notificationAlert = "Notifications sent successfully";
       } catch (notifyErr) {
-        console.error('Failed to send notifications');
+        console.error('email/sms crashed:', notifyErr);
+        notificationAlert = "Status updated, but notifications failed";
       }
     }
 
-    res.status(200).json({ message: `Status updated to ${newStatus}`, appointment });
+    res.status(200).json({ 
+      message: `Status updated to ${newStatus}`, 
+      alert: notificationAlert,
+      appointment 
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error updating status' });
   }
 };
-
 const handleQRScan = async (req, res) => {
   try {
     const { appointmentId } = req.body;
